@@ -33,34 +33,65 @@
   "Writes the header for a documentation entry of name NAME and
 type TYPE.  The HTML anchor will only get a 'name' attribute if
 WRITE-NAME-P is true and NAME is not a SETF name."
-  (format t "~%~%<!-- Entry for ~A -->~%~%<p><br>[~A]<br><a class=none~@[ name='~A'~]>" 
-          name type (and write-name-p (atom name) (string-downcase name))))
+  (case *format*
+    (:html
+     (format t "~%~%<!-- Entry for ~A -->~%~%<p><br>[~A]<br><a class=none~@[ name='~A'~]>" 
+             name type (and write-name-p (atom name) (string-downcase name))))
+    (:markdown
+     (format t "~%~%(~A)~%" 
+             type (and write-name-p (atom name) (string-downcase name))))))
+
+(defun auto-format (string)
+  (case *format*
+    (:html
+     (setf string (cl-ppcre:regex-replace-all "(?<!\\w)(\\:[\\w\\-]+)" string "<tt>\\1</tt>"))
+     (setf string (cl-ppcre:regex-replace-all "\\bNOTE: " string "<strong>NOTE:</strong> "))
+     (loop for sym in *all-exported-symbols* do
+           (setf string (cl-ppcre:regex-replace-all (format nil "\\b(~a)\\b" (cl-ppcre:regex-replace-all "([\\*\\+])" sym "\\\\\\1")) string "<a href=\"#\\1\"><code>\\1</code></a>"))))
+    (:markdown
+     (setf string (cl-ppcre:regex-replace-all "(?<!\\w)(\\:[\\w\\-]+)" string "`\\1`"))
+     (loop for sym in *all-exported-symbols* do
+           (setf string (cl-ppcre:regex-replace-all (format nil "\\b(~a)\\b" (cl-ppcre:regex-replace-all "([\\*\\+])" sym "\\\\\\1")) string "`\\1`")))))
+  string)
 
 (defun write-entry-footer (name doc-string)
   "Writes the footer for a documentation entry for the name NAME
 including the documentation string DOC-STRING."
-  (format t "~%<blockquote><br>~%~%~@[~A~]~%~%</blockquote>~%~%<!-- End of entry for ~A -->~%"
-          (and doc-string (escape-string-iso-8859-1 doc-string)) name))
+  (case *format*
+    (:html
+     (let ((doc-string (when doc-string (cl-ppcre:regex-replace-all "\\n\\n" (escape-string-iso-8859-1 doc-string) (format nil "</p>~%<p>")))))
+       (format t "~%<blockquote>~%~%<p>~@[~A~]</p>~%~%</blockquote>~%~%<!-- End of entry for ~A -->~%"
+               ;(and doc-string (escape-string-iso-8859-1 doc-string))
+               (when doc-string (auto-format doc-string))
+               name)))
+    (:markdown
+     (format t "~%~%~@[~A~]~%~%" (when doc-string (auto-format doc-string))))))
 
 (defun write-constant-entry (symbol doc-string)
   "Writes a full documentation entry for the constant SYMBOL."
   (write-entry-header symbol "Constant")
-  (format t "<b>~A</b></a>" (string-downcase symbol))
+  (case *format*
+    (:html (format t "<b>~A</b></a>" (string-downcase symbol)))
+    (:markdown (format t "**~A**" (string-downcase symbol))))
   (write-entry-footer symbol doc-string))
 
 (defun write-special-var-entry (symbol doc-string)
   "Writes a full documentation entry for the special variable
 SYMBOL."
   (write-entry-header symbol "Special variable")
-  (format t "<b>~A</b></a>" (string-downcase symbol))
+  (case *format*
+    (:html (format t "<b>~A</b></a>" (string-downcase symbol)))
+    (:markdown (format t "**~A**" (string-downcase symbol))))
   (write-entry-footer symbol doc-string))
 
 (defun write-class-entry (symbol doc-string)
   "Writes a full documentation entry for the class SYMBOL."
   (write-entry-header symbol (if (subtypep symbol 'condition)
                                "Condition type" "Standard class"))
-                               
-  (format t "<b>~A</b></a>" (string-downcase symbol))
+  
+  (case *format*
+    (:html (format t "<b>~A</b></a>" (string-downcase symbol)))
+    (:markdown (format t "**~A**" (string-downcase symbol))))
   (write-entry-footer symbol doc-string))
 
 (defun write-lambda-list* (lambda-list &optional specializers)
@@ -82,7 +113,9 @@ calls itself recursive if needed."
                      ((member part '(&key &optional &rest &allow-other-keys &aux &environment &whole))
                       ;; marks these between <tt> and </tt>
                       (setq after-required-args-p t)
-                      (format t "<tt>~A</tt>" (escape-string (string-downcase part))))
+                      (case *format*
+                        (:html (format t "<tt>~A</tt>" (escape-string (string-downcase part))))
+                        (:markdown (format t "`~A`" (string-downcase part)))))
                      ((eq part '&body)
                       ;; we don't really write '&BODY', we write it
                       ;; like in the CLHS
@@ -93,20 +126,32 @@ calls itself recursive if needed."
                       (let ((specializer (pop specializers)))
                         (cond ((and specializer (not (eq specializer t)))
                                ;; add specializers if there are any left
-                               (write-string (escape-string
-                                              (string-downcase
-                                               (format nil "(~A ~A)" part specializer)))))
-                              (t (write-string (escape-string (string-downcase part)))))))))))))
+                               (case *format*
+                                 (:html
+                                  (write-string (escape-string
+                                                 (string-downcase
+                                                  (format nil "(~A ~A)" part specializer)))))
+                                 (:markdown
+                                  (write-string (string-downcase
+                                                  (format nil "(_~A_ _~A_)" part specializer))))))
+                              (t
+                               (case *format*
+                                 (:html
+                                  (write-string (escape-string (string-downcase part))))
+                                 (:markdown
+                                  (format t "_~a_" (string-downcase part))))))))))))))
 
 (defun write-lambda-list (lambda-list &key (resultp t) specializers)
   "Writes the lambda list LAMBDA-LIST, optionally with the
 specializers SPECIALIZERS.  Adds something like `=> result' at
 the end if RESULTP is true."
-  (write-string "<i>")
+  (write-string (case *format* (:html "<i>") (:markdown "")))
   (write-lambda-list* lambda-list specializers)
-  (write-string "</i>")
+  (write-string (case *format* (:html "</i>") (:markdown "")))
   (when resultp
-    (write-string " =&gt; <i>result</i></a>")))
+    (case *format*
+      (:html (write-string " =&gt; <i>result</i></a>"))
+      (:markdown (write-string " => _result_")))))
 
 (defun write-macro-entry (symbol lambda-list doc-string)
   "Writes a full documentation entry for the macro SYMBOL."
@@ -153,21 +198,33 @@ full header."
                                         (:generic-function "Generic function")
                                         (:function "Function")))
                                :write-name-p (null specializers))))
-    (cond (setfp
-           (format t "<tt>(setf (</tt><b>~A</b> " (string-downcase symbol))
-           (write-lambda-list (rest lambda-list) :resultp resultp :specializers (rest specializers))
-           (write-string "<tt>)</tt> ")
-           ;; we should use the specializer here as well
-           (format t "<i>~A</i>" (string-downcase (first lambda-list)))
-           (write-string "<tt>)</tt></a>")
-           (format t "~(~{<tt> ~S</tt>~^~}~)" qualifiers))
-          (t (format t "<b>~A</b> " (string-downcase symbol))
-             (write-lambda-list lambda-list :specializers specializers :resultp resultp)
-             (format t "~(~{<tt> ~S</tt>~^~}~)" qualifiers)))
+    (cond
+     (setfp
+      (case *format*
+        (:html (format t "<tt>(setf (</tt><b>~A</b> " (string-downcase symbol)))
+        (:markdown (format t "`(setf (~a " (string-downcase symbol))))
+      (write-lambda-list (rest lambda-list) :resultp resultp :specializers (rest specializers))
+      (case *format*
+        (:html (write-string "<tt>)</tt> "))
+        (:markdown (write-string "` ")))
+      ;; we should use the specializer here as well
+      (case *format*
+        (:html (format t "<i>~A</i><tt>)</tt></a>~(~{<tt> ~S</tt>~^~}~)" (string-downcase (first lambda-list)) qualifiers))
+        (:markdown (format t "`~a`) ~(~{<tt> ~S</tt>~^~}~)" (string-downcase (first lambda-list)) qualifiers))))
+     (t
+      (case *format*
+        (:html (format t "<b>~A</b> " (string-downcase symbol)))
+        (:markdown (format t "**~a** " (string-downcase symbol))))
+      (write-lambda-list lambda-list :specializers specializers :resultp resultp)
+      (case *format*
+        (:html (format t "~(~{<tt> ~S</tt>~^~}~)" qualifiers))
+        (:markdown "~(~{<tt> ~S</tt>~^~}~)" qualifiers))))
     (when writer
       ;; if this is an accessor, the add the writer immediately after
       ;; the reader..
-      (format t "~%<br>")
+      (case *format*
+        (:html (format t "~%<br>"))
+        (:markdown (format t "~%~%")))
       (destructuring-bind (name doc-type lambda-list doc-string &optional specializers qualifiers)
           writer
         (declare (ignore doc-type doc-string))
@@ -208,11 +265,12 @@ written.  OTHER-ENTRIES, probably updated, will be returned."
                                            :qualifiers qualifiers)))))
   other-entries)
 
-(defun write-page-header (package-name subtitle symbols)
+(defun write-page-header (package-name subtitle version symbols)
   "Writes the header of the HTML page.  Assumes that the library
 has the same name as the package.  Adds a list of all exported
 symbols with links."
-  (format t "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">
+  (case *format*
+    (:html (format t "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">
 <html> 
 
 <head>
@@ -239,14 +297,13 @@ symbols with links."
 
 <body bgcolor=white>
 
-<h2> ~2:*~A - ~A</h2>
+<h2>~2:*~A - ~A</h2>
 
 <blockquote>
 <br>&nbsp;<br><h3><a name=abstract class=none>Abstract</a></h3>
 
 The code comes with
-a <a
-href=\"http://www.opensource.org/licenses/bsd-license.php\">BSD-style
+a <a href=\"http://www.opensource.org/licenses/bsd-license.php\">BSD-style
 license</a> so you can basically do with it whatever you want.
 
 <p>
@@ -265,41 +322,70 @@ license</a> so you can basically do with it whatever you want.
 
 <br>&nbsp;<br><h3><a class=none name=\"download\">Download</a></h3>
 
-~2:*~A together with this documentation can be downloaded from <a
-href=\"http://weitz.de/files/~2:*~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>. The
-current version is 0.1.0.
+~A together with this documentation can be downloaded from <a
+href=\"http://weitz.de/files/~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>. The
+current version is ~A.
 
 <br>&nbsp;<br><h3><a class=none name=\"dictionary\">The ~A dictionary</a></h3>
 
 "
-          package-name subtitle (string-downcase package-name)
-          package-name symbols))
+          package-name subtitle (string-downcase package-name) package-name
+          symbols package-name (string-downcase package-name) version package-name))))
+    (:markdown
+     (format t "# ~A - ~A
+
+## Abstract
+
+The code comes with
+a [BSD-style license](http://www.opensource.org/licenses/bsd-license.php) so you can basically do with it whatever you want.
+
+## Contents
+- [Download](#download)
+- The ~A dictionary
+~{  - [`~A`](#~:*~A)
+~}
+- [Acknowledgements](#acknowledgements)
+
+## Download
+
+~A together with this documentation can be downloaded from [www.](http://www.)
+current version is ~a.
+
+## The ~A dictionary
+" package-name subtitle (string-downcase package-name)
+               symbols (string-downcase package-name) version (string-downcase package-name)))))
 
 (defun write-page-footer ()
-  "Writes the footer of the HTML page."
-  (write-string "
+  "Writes the footer of the page."
+  (case *format*
+    (:html (write-string "
 
 <br>&nbsp;<br><h3><a class=none name=\"ack\">Acknowledgements</a></h3>
 
 <p>
-This documentation was prepared with <a href=\"http://weitz.de/documentation-template/\">DOCUMENTATION-TEMPLATE</a>.
+This documentation was prepared with a <a href=\"https://github.com/erikronstrom/documentation-template\">patched version</a> of <a href=\"https://edicl.github.io/documentation-template/\">DOCUMENTATION-TEMPLATE</a>.
 </p>
-<p>
-$Header: /usr/local/cvsrep/documentation-template/output.lisp,v 1.19 2014-11-23 12:12:59 edi Exp $
-<p><a href=\"http://weitz.de/index.html\">BACK TO MY HOMEPAGE</a>
 
 </body>
 </html>"))
+    (:markdown
+     (write-string "
+
+## Acknowledgements
+This documentation was prepared with a [patched version](https://github.com/erikronstrom/documentation-template) of [DOCUMENTATION-TEMPLATE](https://edicl.github.io/documentation-template/)
+"))))
 
 (defun create-template (package &key (target (or *target*
                                                  #-:lispworks (error "*TARGET* not specified.")
                                                  #+:lispworks
                                                  (capi:prompt-for-file "Select an output target:"
                                                                        :operation :save
-                                                                       :filters '("HTML Files" "*.HTML;*.HTM"
+                                                                       :filters '("HTML Files" "*.html"
                                                                                   "All Files" "*.*")
-                                                                       :filter "*.HTML;*.HTM")))
-                                     (subtitle "a cool library")
+                                                                       :filter "*.html")))
+                                     (format :html)
+                                     (subtitle nil subtitle-provided-p)
+                                     (version nil)
                                      ((:maybe-skip-methods-p *maybe-skip-methods-p*)
                                       *maybe-skip-methods-p*)
                                      (if-exists :supersede)
@@ -311,6 +397,12 @@ inidividual methods are skipped if the corresponding generic function
 has a documentation string."
   (when target
     (setq *target* target))
+  (when format
+    (setq *format* format))
+  (unless subtitle-provided-p
+    (let ((system (ignore-errors (asdf/system:find-system package))))
+      (when system
+        (setf subtitle (asdf/system:system-description (asdf/system:find-system :cl-smufl))))))
   (let (*symbols*)
     (with-open-file (*standard-output* target
                                        :direction :output
@@ -318,11 +410,12 @@ has a documentation string."
                                        :if-does-not-exist if-does-not-exist)
       (let ((body
              (with-output-to-string (*standard-output*)
-               (let ((entries (collect-all-doc-entries package)))
+               (let* ((entries (collect-all-doc-entries package))
+                      (*all-exported-symbols* (remove-duplicates (mapcar (lambda (x) (format nil "~(~a~)" x)) (mapcar #'first entries)) :test #'equalp)))
                  (loop
                   (let ((entry (or (pop entries) (return))))
                     (setq entries (write-entry entry entries))))))))
-        (write-page-header (package-name package) subtitle
+        (write-page-header (package-name package) subtitle version
                            (mapcar #'string-downcase (reverse *symbols*)))
         (write-string body)
         (write-page-footer))))

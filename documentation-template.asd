@@ -44,4 +44,4 @@
                (:file "specials")
                (:file "util")
                (:file "output"))
-  :depends-on (:cl-who))
+  :depends-on (:cl-who :cl-ppcre))

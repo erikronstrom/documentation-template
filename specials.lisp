@@ -34,6 +34,9 @@
 be the default target for CREATE-TEMPLATE.  CREATE-TEMPLATE will also
 set this value.")
 
+(defvar *format* :html
+  "The output format. Currently supported formats are :html and :markdown")
+
 (defvar *maybe-skip-methods-p* nil
   "This is the default value for the :MAYBE-SKIP-METHODS-P keyword
 argument of CREATE-TEMPLATE and its initial value is NIL.  It is also
@@ -41,6 +44,9 @@ used internally.")
 
 (defvar *symbols* nil
   "The list of symbols for which we will create an index with links.")
+
+(defvar *all-exported-symbols* nil
+  "The list of exported symbols used to auto-create links")
 
 ;; stuff for Nikodemus Siivola's HYPERDOC
 ;; see <http://common-lisp.net/project/hyperdoc/>
