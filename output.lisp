@@ -44,7 +44,7 @@ WRITE-NAME-P is true and NAME is not a SETF name."
 (defun auto-format (string)
   (case *format*
     (:html
-     (setf string (cl-ppcre:regex-replace-all "(?<!\\w)(\\:[\\w\\-]+)" string "<tt>\\1</tt>"))
+     (setf string (cl-ppcre:regex-replace-all "(?<!\\w)(\\:[\\w\\-]+)" string "<code>\\1</code>"))
      (setf string (cl-ppcre:regex-replace-all "\\bNOTE: " string "<strong>NOTE:</strong> "))
      (loop for sym in *all-exported-symbols* do
            (setf string (cl-ppcre:regex-replace-all (format nil "\\b(~a)\\b" (cl-ppcre:regex-replace-all "([\\*\\+])" sym "\\\\\\1")) string "<a href=\"#\\1\"><code>\\1</code></a>"))))
