@@ -35,7 +35,7 @@ type TYPE.  The HTML anchor will only get a 'name' attribute if
 WRITE-NAME-P is true and NAME is not a SETF name."
   (case *format*
     (:html
-     (format t "~%~%<!-- Entry for ~A -->~%~%<p><br>[~A]<br><a class=none~@[ name='~A'~]>" 
+     (format t "~%~%<!-- Entry for ~A -->~%~%<p><br><span class=\"type\">[~A]</span><br><a class=\"none\"~@[ name='~A'~]>" 
              name type (and write-name-p (atom name) (string-downcase name))))
     (:markdown
      (format t "~%~%(~A)~%" 
@@ -278,6 +278,7 @@ symbols with links."
   <title>~A - ~A</title>
   <style type=\"text/css\">
   pre { padding:5px; background-color:#e0e0e0 }
+  h3 { margin-top: 40px }
   h3, h4 { text-decoration: underline; }
   a { text-decoration: none; padding: 1px 2px 1px 2px; }
   a:visited { text-decoration: none; padding: 1px 2px 1px 2px; }
@@ -292,6 +293,7 @@ symbols with links."
   a.noborder:hover { text-decoration: none; border: none; padding: 0; } 
   a.noborder:focus { text-decoration: none; border: none; padding: 0; }  
   pre.none { padding:5px; background-color:#ffffff }
+  .type { color: #999 }
   </style>
 </head>
 
@@ -300,17 +302,15 @@ symbols with links."
 <h2>~2:*~A - ~A</h2>
 
 <blockquote>
-<br>&nbsp;<br><h3><a name=abstract class=none>Abstract</a></h3>
+  <h3><a name=\"abstract\" class=\"none\">Abstract</a></h3>
 
-The code comes with
-a <a href=\"http://www.opensource.org/licenses/bsd-license.php\">BSD-style
-license</a> so you can basically do with it whatever you want.
+  <p>The code comes with a <a href=\"http://www.opensource.org/licenses/bsd-license.php\">BSD-style
+  license</a> so you can basically do with it whatever you want.</p>
 
-<p>
-<font color=red>Download shortcut:</font> <a href=\"http://weitz.de/files/~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>.
+  <p><span style=\"color: red\">Download shortcut:</span> <a href=\"http://weitz.de/files/~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>.</p>
 </blockquote>
 
-<br>&nbsp;<br><h3><a class=none name=\"contents\">Contents</a></h3>
+<h3><a class=none name=\"contents\">Contents</a></h3>
 <ol>
   <li><a href=\"#download\">Download</a>
   <li><a href=\"#dictionary\">The ~A dictionary</a>
@@ -320,17 +320,17 @@ license</a> so you can basically do with it whatever you want.
   <li><a href=\"#ack\">Acknowledgements</a>
 </ol>
 
-<br>&nbsp;<br><h3><a class=none name=\"download\">Download</a></h3>
+<h3><a class=none name=\"download\">Download</a></h3>
 
-~A together with this documentation can be downloaded from <a
+<p>~A together with this documentation can be downloaded from <a
 href=\"http://weitz.de/files/~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>. The
-current version is ~A.
+current version is ~A.</p>
 
-<br>&nbsp;<br><h3><a class=none name=\"dictionary\">The ~A dictionary</a></h3>
+<h3><a class=none name=\"dictionary\">The ~A dictionary</a></h3>
 
 "
           package-name subtitle (string-downcase package-name) package-name
-          symbols package-name (string-downcase package-name) version package-name))))
+          symbols package-name (string-downcase package-name) version package-name))
     (:markdown
      (format t "# ~A - ~A
 
@@ -360,7 +360,7 @@ current version is ~a.
   (case *format*
     (:html (write-string "
 
-<br>&nbsp;<br><h3><a class=none name=\"ack\">Acknowledgements</a></h3>
+<h3><a class=none name=\"ack\">Acknowledgements</a></h3>
 
 <p>
 This documentation was prepared with a <a href=\"https://github.com/erikronstrom/documentation-template\">patched version</a> of <a href=\"https://edicl.github.io/documentation-template/\">DOCUMENTATION-TEMPLATE</a>.
