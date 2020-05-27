@@ -186,7 +186,7 @@ full header."
                        (null (intersection '(:before :after)
                                            qualifiers)))))    
     (cond (signature-only-p
-           (write-string "<a class=none>"))
+           (write-string "<a class=\"none\">"))
           (t
            (write-entry-header name (if writer
                                       (ecase type
@@ -312,21 +312,22 @@ symbols with links."
 
 <h3><a class=none name=\"contents\">Contents</a></h3>
 <ol>
-  <li><a href=\"#download\">Download</a>
+  <li><a href=\"#download\">Download</a></li>
   <li><a href=\"#dictionary\">The ~A dictionary</a>
     <ol>
 ~{      <li><a href=\"#~A\"><code>~:*~A</code></a>
 ~}    </ol>
-  <li><a href=\"#ack\">Acknowledgements</a>
+  </li>
+  <li><a href=\"#ack\">Acknowledgements</a></li>
 </ol>
 
-<h3><a class=none name=\"download\">Download</a></h3>
+<h3><a class=\"none\" name=\"download\">Download</a></h3>
 
 <p>~A together with this documentation can be downloaded from <a
 href=\"http://weitz.de/files/~A.tar.gz\">http://weitz.de/files/~:*~A.tar.gz</a>. The
 current version is ~A.</p>
 
-<h3><a class=none name=\"dictionary\">The ~A dictionary</a></h3>
+<h3><a class=\"none\" name=\"dictionary\">The ~A dictionary</a></h3>
 
 "
           package-name subtitle (string-downcase package-name) package-name
@@ -360,7 +361,7 @@ current version is ~a.
   (case *format*
     (:html (write-string "
 
-<h3><a class=none name=\"ack\">Acknowledgements</a></h3>
+<h3><a class=\"none\" name=\"ack\">Acknowledgements</a></h3>
 
 <p>
 This documentation was prepared with a <a href=\"https://github.com/erikronstrom/documentation-template\">patched version</a> of <a href=\"https://edicl.github.io/documentation-template/\">DOCUMENTATION-TEMPLATE</a>.
